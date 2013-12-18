@@ -38,6 +38,11 @@
             <email>me@matthiasb.com</email>
             <url>http://matthiasb.com</url>
         </contributor>
+        <contributor>
+            <name>Robin Syihab</name>
+            <email>robin@digaku.com</email>
+            <url>http://robin.nosql.asia</url>
+        </contributor>
     </contributors>
     <inceptionYear>2012</inceptionYear>
     <licenses>
