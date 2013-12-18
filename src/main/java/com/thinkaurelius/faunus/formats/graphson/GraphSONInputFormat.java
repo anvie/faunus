@@ -2,6 +2,7 @@ package com.thinkaurelius.faunus.formats.graphson;
 
 import com.thinkaurelius.faunus.FaunusVertex;
 import com.thinkaurelius.faunus.formats.VertexQueryFilter;
+import com.tinkerpop.blueprints.util.io.graphson.GraphSONMode;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -25,7 +26,20 @@ public class GraphSONInputFormat extends FileInputFormat<NullWritable, FaunusVer
 
     @Override
     public RecordReader<NullWritable, FaunusVertex> createRecordReader(final InputSplit split, final TaskAttemptContext context) {
-        return new GraphSONRecordReader(this.vertexQuery);
+
+        final GraphSONMode mode;
+
+        String modeStr = context.getConfiguration().getRaw("faunus.graphson.mode");
+
+        if (modeStr.equals("normal")){
+            mode = GraphSONMode.NORMAL;
+        }else if (modeStr.equals("extended")){
+            mode = GraphSONMode.EXTENDED;
+        }else{
+            mode = GraphSONMode.COMPACT;
+        }
+
+        return new GraphSONRecordReader(this.vertexQuery, mode);
     }
 
     @Override

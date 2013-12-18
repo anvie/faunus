@@ -16,8 +16,8 @@ import java.io.UnsupportedEncodingException;
  * @author Stephen Mallette (http://stephen.genoprime.com)
  */
 public class GraphSONRecordWriter extends RecordWriter<NullWritable, FaunusVertex> {
-    private static final String UTF8 = "UTF-8";
-    private static final byte[] NEWLINE;
+    protected static final String UTF8 = "UTF-8";
+    protected static final byte[] NEWLINE;
     protected DataOutputStream out;
 
     static {
