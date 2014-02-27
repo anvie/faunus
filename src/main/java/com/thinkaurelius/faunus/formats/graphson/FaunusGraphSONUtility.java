@@ -6,11 +6,7 @@ import com.tinkerpop.blueprints.Direction;
 import com.tinkerpop.blueprints.Edge;
 import com.tinkerpop.blueprints.Element;
 import com.tinkerpop.blueprints.Vertex;
-import com.tinkerpop.blueprints.util.io.graphson.ElementFactory;
-import com.tinkerpop.blueprints.util.io.graphson.ElementPropertyConfig;
-import com.tinkerpop.blueprints.util.io.graphson.GraphSONMode;
-import com.tinkerpop.blueprints.util.io.graphson.GraphSONTokens;
-import com.tinkerpop.blueprints.util.io.graphson.GraphSONUtility;
+import com.tinkerpop.blueprints.util.io.graphson.*;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
@@ -20,11 +16,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 import static com.tinkerpop.blueprints.Direction.IN;
 import static com.tinkerpop.blueprints.Direction.OUT;
@@ -44,7 +36,11 @@ public class FaunusGraphSONUtility {
 
     private static final FaunusElementFactory elementFactory = new FaunusElementFactory();
 
-    private static final GraphSONUtility graphson = new GraphSONUtility(GraphSONMode.COMPACT, elementFactory,
+    private static final GraphSONUtility graphsonCompact = new GraphSONUtility(GraphSONMode.COMPACT, elementFactory,
+            ElementPropertyConfig.ExcludeProperties(VERTEX_IGNORE, EDGE_IGNORE));
+    private static final GraphSONUtility graphsonNormal = new GraphSONUtility(GraphSONMode.NORMAL, elementFactory,
+            ElementPropertyConfig.ExcludeProperties(VERTEX_IGNORE, EDGE_IGNORE));
+    private static final GraphSONUtility graphsonExtended = new GraphSONUtility(GraphSONMode.EXTENDED, elementFactory,
             ElementPropertyConfig.ExcludeProperties(VERTEX_IGNORE, EDGE_IGNORE));
 
     public static List<FaunusVertex> fromJSON(final InputStream in) throws IOException {
@@ -60,32 +56,60 @@ public class FaunusGraphSONUtility {
     }
 
     public static FaunusVertex fromJSON(String line) throws IOException {
+        return fromJSON(line, GraphSONMode.COMPACT);
+    }
+
+    private static GraphSONUtility getGraphSON(GraphSONMode mode){
+        switch(mode){
+            case EXTENDED:
+                return graphsonExtended;
+            case NORMAL:
+                return graphsonNormal;
+            default:
+                return graphsonCompact;
+        }
+
+    }
+
+    public static FaunusVertex fromJSON(String line, GraphSONMode mode) throws IOException {
         try {
             final JSONObject json = new JSONObject(new JSONTokener(line));
             line = EMPTY_STRING; // clear up some memory
 
-            final FaunusVertex vertex = (FaunusVertex) graphson.vertexFromJson(json);
+            JSONArray outEArray = json.optJSONArray(_OUT_E);
+            JSONArray inEArray = json.optJSONArray(_IN_E);
 
-            fromJSONEdges(vertex, json.optJSONArray(_OUT_E), OUT);
             json.remove(_OUT_E); // clear up some memory
-            fromJSONEdges(vertex, json.optJSONArray(_IN_E), IN);
             json.remove(_IN_E); // clear up some memory
 
+            FaunusVertex vertex = (FaunusVertex) getGraphSON(mode).vertexFromJson(json);
+
+            fromJSONEdges(vertex, outEArray, OUT, mode);
+            fromJSONEdges(vertex, inEArray, IN, mode);
+
+
             return vertex;
+        } catch (NullPointerException e){
+            return null;
         } catch (Exception e) {
             throw new IOException(e.getMessage(), e);
         }
     }
 
     private static void fromJSONEdges(final FaunusVertex vertex, final JSONArray edges, final Direction direction) throws JSONException, IOException {
+        fromJSONEdges(vertex, edges, direction, GraphSONMode.COMPACT);
+    }
+
+    private static void fromJSONEdges(final FaunusVertex vertex, final JSONArray edges, final Direction direction, GraphSONMode mode) throws JSONException, IOException {
         if (null != edges) {
             for (int i = 0; i < edges.length(); i++) {
                 final JSONObject edge = edges.optJSONObject(i);
                 FaunusEdge faunusEdge = null;
+
                 if (direction.equals(Direction.IN)) {
-                    faunusEdge = (FaunusEdge) graphson.edgeFromJson(edge, new FaunusVertex(edge.optLong(GraphSONTokens._OUT_V)), vertex);
+                    faunusEdge = (FaunusEdge) getGraphSON(mode).edgeFromJson(edge, new FaunusVertex(edge.optLong(GraphSONTokens._OUT_V)), vertex);
                 } else if (direction.equals(Direction.OUT)) {
-                    faunusEdge = (FaunusEdge) graphson.edgeFromJson(edge, vertex, new FaunusVertex(edge.optLong(GraphSONTokens._IN_V)));
+                    faunusEdge = (FaunusEdge) getGraphSON(mode).edgeFromJson(edge, vertex, new FaunusVertex(edge.optLong(GraphSONTokens._IN_V)));
                 }
 
                 if (faunusEdge != null) {
@@ -96,8 +120,12 @@ public class FaunusGraphSONUtility {
     }
 
     public static JSONObject toJSON(final Vertex vertex) throws IOException {
+        return toJSON(vertex, GraphSONMode.COMPACT);
+    }
+
+    public static JSONObject toJSON(final Vertex vertex, GraphSONMode mode) throws IOException {
         try {
-            final JSONObject object = GraphSONUtility.jsonFromElement(vertex, getElementPropertyKeys(vertex, false), GraphSONMode.COMPACT);
+            final JSONObject object = GraphSONUtility.jsonFromElement(vertex, getElementPropertyKeys(vertex, false), mode);
 
             // force the ID to long.  with blueprints, most implementations will send back a long, but
             // some like TinkerGraph will return a string.  the same is done for edges below
@@ -107,7 +135,7 @@ public class FaunusGraphSONUtility {
             if (!edges.isEmpty()) {
                 final JSONArray outEdgesArray = new JSONArray();
                 for (final Edge outEdge : edges) {
-                    final JSONObject edgeObject = GraphSONUtility.jsonFromElement(outEdge, getElementPropertyKeys(outEdge, true), GraphSONMode.COMPACT);
+                    final JSONObject edgeObject = GraphSONUtility.jsonFromElement(outEdge, getElementPropertyKeys(outEdge, true), mode);
                     outEdgesArray.put(edgeObject);
                 }
                 object.put(_OUT_E, outEdgesArray);
@@ -117,7 +145,7 @@ public class FaunusGraphSONUtility {
             if (!edges.isEmpty()) {
                 final JSONArray inEdgesArray = new JSONArray();
                 for (final Edge inEdge : edges) {
-                    final JSONObject edgeObject = GraphSONUtility.jsonFromElement(inEdge, getElementPropertyKeys(inEdge, false), GraphSONMode.COMPACT);
+                    final JSONObject edgeObject = GraphSONUtility.jsonFromElement(inEdge, getElementPropertyKeys(inEdge, false), mode);
                     inEdgesArray.put(edgeObject);
                 }
                 object.put(_IN_E, inEdgesArray);

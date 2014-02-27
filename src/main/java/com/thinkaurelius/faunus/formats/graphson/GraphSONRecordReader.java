@@ -4,6 +4,7 @@ package com.thinkaurelius.faunus.formats.graphson;
 import com.thinkaurelius.faunus.FaunusVertex;
 import com.thinkaurelius.faunus.formats.VertexQueryFilter;
 import com.thinkaurelius.faunus.mapreduce.FaunusCompiler;
+import com.tinkerpop.blueprints.util.io.graphson.GraphSONMode;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.RecordReader;
@@ -21,10 +22,16 @@ public class GraphSONRecordReader extends RecordReader<NullWritable, FaunusVerte
     private final LineRecordReader lineRecordReader;
     private final VertexQueryFilter vertexQuery;
     private FaunusVertex vertex = null;
+    private GraphSONMode mode;
 
     public GraphSONRecordReader(VertexQueryFilter vertexQuery) {
+        this(vertexQuery, GraphSONMode.COMPACT);
+    }
+
+    public GraphSONRecordReader(VertexQueryFilter vertexQuery, GraphSONMode mode) {
         this.lineRecordReader = new LineRecordReader();
         this.vertexQuery = vertexQuery;
+        this.mode = mode;
     }
 
     @Override
@@ -38,9 +45,15 @@ public class GraphSONRecordReader extends RecordReader<NullWritable, FaunusVerte
         if (!this.lineRecordReader.nextKeyValue())
             return false;
 
-        this.vertex = FaunusGraphSONUtility.fromJSON(this.lineRecordReader.getCurrentValue().toString());
+        this.vertex = FaunusGraphSONUtility.fromJSON(this.lineRecordReader.getCurrentValue().toString(), mode);
+
+        if (this.vertex == null)
+            return false;
+
+        
         this.vertexQuery.defaultFilter(this.vertex);
         this.vertex.enablePath(this.pathEnabled);
+
         return true;
     }
 
