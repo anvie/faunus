@@ -47,8 +47,13 @@ public class GraphSONRecordReader extends RecordReader<NullWritable, FaunusVerte
 
         this.vertex = FaunusGraphSONUtility.fromJSON(this.lineRecordReader.getCurrentValue().toString(), mode);
 
+        if (this.vertex == null)
+            return false;
+
+        
         this.vertexQuery.defaultFilter(this.vertex);
         this.vertex.enablePath(this.pathEnabled);
+
         return true;
     }
 
