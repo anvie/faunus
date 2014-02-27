@@ -22,9 +22,9 @@ public class GraphSONOutputFormat extends FaunusFileOutputFormat {
 
         String modeStr = job.getConfiguration().getRaw("faunus.graphson.mode");
 
-        if (modeStr == "normal"){
+        if (modeStr.equals("normal")){
             mode = GraphSONMode.NORMAL;
-        }else if (modeStr == "extended"){
+        }else if (modeStr.equals("extended")){
             mode = GraphSONMode.EXTENDED;
         }else{
             mode = GraphSONMode.COMPACT;
