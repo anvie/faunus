@@ -210,11 +210,17 @@ public abstract class FaunusElement implements Element, WritableComparable<Faunu
     public void write(final DataOutput out) throws IOException {
         WritableUtils.writeVLong(out, this.id);
         out.writeBoolean(this.pathEnabled);
-        if (this.pathEnabled)
-            ElementPaths.write(this.paths, out);
-        else
-            WritableUtils.writeVLong(out, this.pathCounter);
-        ElementProperties.write(this.properties, out);
+        
+        try {
+            if (this.pathEnabled)
+                ElementPaths.write(this.paths, out);
+            else
+                WritableUtils.writeVLong(out, this.pathCounter);
+            ElementProperties.write(this.properties, out);
+        } catch (com.esotericsoftware.kryo.KryoException e) {
+            throw new com.esotericsoftware.kryo.KryoException("Kryo failed when processing " + this.toString() +
+                    ". " + e.getMessage());
+        }
     }
 
     @Override
