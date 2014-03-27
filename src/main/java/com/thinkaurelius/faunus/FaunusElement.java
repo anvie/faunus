@@ -249,8 +249,10 @@ public abstract class FaunusElement implements Element, WritableComparable<Faunu
                         o.writeClassAndObject(entry.getValue());
 
                     } catch (com.esotericsoftware.kryo.KryoException e) {
-                        throw new com.esotericsoftware.kryo.KryoException("Kryo failed when processing " + elm.toString() +
-                                ".`" + entry.getKey() + "` = `" + entry.getValue() + "` " + e.getMessage());
+                        String msg = "Kryo failed when processing " + elm.toString() +
+                                ".`" + entry.getKey() + "` = `" + entry.getValue() + "` " + e.getMessage();
+//                        throw new com.esotericsoftware.kryo.KryoException(msg);
+                        System.err.println(msg);
                     }
                 }
                 final StaticBuffer buffer = o.getStaticBuffer();
