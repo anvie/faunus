@@ -210,11 +210,12 @@ public abstract class FaunusElement implements Element, WritableComparable<Faunu
     public void write(final DataOutput out) throws IOException {
         WritableUtils.writeVLong(out, this.id);
         out.writeBoolean(this.pathEnabled);
+
         if (this.pathEnabled)
             ElementPaths.write(this.paths, out);
         else
             WritableUtils.writeVLong(out, this.pathCounter);
-        ElementProperties.write(this.properties, out);
+        ElementProperties.write(this, out);
     }
 
     @Override
@@ -233,15 +234,24 @@ public abstract class FaunusElement implements Element, WritableComparable<Faunu
 
     public static class ElementProperties {
 
-        public static void write(final Map<String, Object> properties, final DataOutput out) throws IOException {
+        public static void write(final FaunusElement elm, final DataOutput out) throws IOException {
+            final Map<String, Object> properties = elm.properties;
+
             if (null == properties || properties.size() == 0)
                 WritableUtils.writeVInt(out, 0);
             else {
                 WritableUtils.writeVInt(out, properties.size());
                 final com.thinkaurelius.titan.graphdb.database.serialize.DataOutput o = serialize.getDataOutput(128, true);
                 for (final Map.Entry<String, Object> entry : properties.entrySet()) {
-                    o.writeObject(entry.getKey(), String.class);
-                    o.writeClassAndObject(entry.getValue());
+                    try {
+
+                        o.writeObject(entry.getKey(), String.class);
+                        o.writeClassAndObject(entry.getValue());
+
+                    } catch (com.esotericsoftware.kryo.KryoException e) {
+                        throw new com.esotericsoftware.kryo.KryoException("Kryo failed when processing " + elm.toString() +
+                                ".`" + entry.getKey() + "` = `" + entry.getValue() + "` " + e.getMessage());
+                    }
                 }
                 final StaticBuffer buffer = o.getStaticBuffer();
                 WritableUtils.writeVInt(out, buffer.length());
