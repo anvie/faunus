@@ -251,8 +251,8 @@ public abstract class FaunusElement implements Element, WritableComparable<Faunu
                     } catch (com.esotericsoftware.kryo.KryoException e) {
                         String msg = "Kryo failed when processing " + elm.toString() +
                                 ".`" + entry.getKey() + "` = `" + entry.getValue() + "` " + e.getMessage();
-//                        throw new com.esotericsoftware.kryo.KryoException(msg);
-                        System.err.println(msg);
+                        throw new com.esotericsoftware.kryo.KryoException(msg);
+//                        System.err.println(msg);
                     }
                 }
                 final StaticBuffer buffer = o.getStaticBuffer();
@@ -277,8 +277,10 @@ public abstract class FaunusElement implements Element, WritableComparable<Faunu
                         valueObject = serialize.readClassAndObject(buffer);
                         properties.put(TYPE_MAP.get(key), valueObject);
                     } catch (com.esotericsoftware.kryo.KryoException e) {
-                        System.err.println("Error processing `" + key + "` `" + TYPE_MAP.get(key) + "`");
-                        e.printStackTrace(System.err);
+                        String msg = "Error processing `" + key + "` `" + TYPE_MAP.get(key) + "`";
+//                        System.err.println(msg);
+//                        e.printStackTrace(System.err);
+                        throw new com.esotericsoftware.kryo.KryoException(msg);
                     }
                 }
                 return properties;
