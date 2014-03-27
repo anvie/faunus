@@ -272,8 +272,14 @@ public abstract class FaunusElement implements Element, WritableComparable<Faunu
                 final ReadBuffer buffer = new ReadByteBuffer(bytes);
                 for (int i = 0; i < numberOfProperties; i++) {
                     final String key = serialize.readObject(buffer, String.class);
-                    final Object valueObject = serialize.readClassAndObject(buffer);
-                    properties.put(TYPE_MAP.get(key), valueObject);
+                    final Object valueObject;
+                    try {
+                        valueObject = serialize.readClassAndObject(buffer);
+                        properties.put(TYPE_MAP.get(key), valueObject);
+                    } catch (com.esotericsoftware.kryo.KryoException e) {
+                        System.err.println("Error processing `" + key + "` `" + TYPE_MAP.get(key) + "`");
+                        e.printStackTrace(System.err);
+                    }
                 }
                 return properties;
             }
